@@ -7,11 +7,11 @@
 #
 # Then, build the image with:
 #
-# docker build -f src/main/docker/Dockerfile.native -t quarkus/imersao-ia .
+# docker build -f src/main/docker/Dockerfile.native -t quarkus/langchaindemo .
 #
 # Then run the container using:
 #
-# docker run -i --rm -p 8080:8080 quarkus/imersao-ia
+# docker run -i --rm -p 8080:8080 quarkus/langchaindemo
 #
 ###
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9

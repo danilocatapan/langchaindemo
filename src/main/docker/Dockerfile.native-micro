@@ -10,11 +10,11 @@
 #
 # Then, build the image with:
 #
-# docker build -f src/main/docker/Dockerfile.native-micro -t quarkus/imersao-ia .
+# docker build -f src/main/docker/Dockerfile.native-micro -t quarkus/langchaindemo .
 #
 # Then run the container using:
 #
-# docker run -i --rm -p 8080:8080 quarkus/imersao-ia
+# docker run -i --rm -p 8080:8080 quarkus/langchaindemo
 #
 ###
 FROM quay.io/quarkus/quarkus-micro-image:2.0
