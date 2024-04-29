@@ -1,5 +1,6 @@
-package com.catapan;
+package com.catapan.openia.resource;
 
+import com.catapan.openia.dto.MyQuestion;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
