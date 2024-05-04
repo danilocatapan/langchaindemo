@@ -3,12 +3,14 @@ package com.catapan.openia.resource;
 import com.catapan.openia.dto.MyQuestion;
 import com.catapan.openia.dto.MyStructuredTemplate;
 import com.catapan.openia.dto.MyStructuredTemplate.PromptDeReceita;
+import com.catapan.openia.errors.ErrorResponse;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.image.ImageModel;
 import dev.langchain4j.model.input.Prompt;
 import dev.langchain4j.model.input.structured.StructuredPromptProcessor;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiImageModel;
+import io.quarkus.arc.impl.UncaughtExceptions;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -19,16 +21,22 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import java.util.Arrays;
 
 @Path("/openai")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.TEXT_PLAIN)
+@Tag(name = "OpenAI Language Models", description = "Operações relacionadas à geração de texto," +
+        " imagens e receitas utilizando os modelos de linguagem da OpenAI.")
 public class OpenAIResource {
-
-    private static final Logger LOGGER = Logger.getLogger(OpenAIResource.class);
 
     @ConfigProperty(name = "quarkus.langchain4j.openai.api-key")
     String apiKey;
@@ -41,15 +49,19 @@ public class OpenAIResource {
      * Utiliza a API da OpenAI para gerar respostas a partir das perguntas dos usuários.
      */
     @POST
-    @Path("/answer/generate")
-    public Response chatWithOpenAI(MyQuestion question) {
-        LOGGER.info("Recebido: " + question.question());
-
+    @Path("/answer")
+    @Operation(summary = "Gerar resposta para uma pergunta",
+            description = "Recebe uma pergunta e retorna a resposta gerada pelo modelo de linguagem configurado.")
+    @APIResponses(value = {
+            @APIResponse(responseCode = "200", description = "Resposta gerada com sucesso",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = String.class))),
+            @APIResponse(responseCode = "400", description = "Pergunta inválida"),
+            @APIResponse(responseCode = "500", description = "Erro interno no servidor")
+    })
+    public Response chatWithOpenAI(@Valid MyQuestion question) {
         // Geração da resposta utilizando o modelo de linguagem configurado.
         String answer = chatModel.generate(question.question());
-
-        LOGGER.info("Resposta: " + answer);
-
         // Criação e retorno da resposta HTTP com o texto gerado.
         return Response.ok(answer).build();
     }
@@ -60,9 +72,16 @@ public class OpenAIResource {
      */
     @POST
     @Path("/answer/model")
-    public Response chatModelWithOpenAI(MyQuestion question) {
-        LOGGER.info("Recebido: " + question.question());
-
+    @Operation(summary = "Gerar resposta usando um modelo de linguagem configurável",
+            description = "Configura e utiliza um modelo de linguagem personalizado para gerar respostas baseadas nas perguntas dos usuários.")
+    @APIResponses(value = {
+            @APIResponse(responseCode = "200", description = "Resposta gerada com sucesso",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = String.class))),
+            @APIResponse(responseCode = "400", description = "Dados de entrada inválidos"),
+            @APIResponse(responseCode = "500", description = "Erro interno no servidor")
+    })
+    public Response chatModelWithOpenAI(@Valid MyQuestion question) {
         ChatLanguageModel customModel = new OpenAiChatModel.OpenAiChatModelBuilder()
                 .apiKey(apiKey)  // Utiliza a chave API para autenticação no serviço da OpenAI.
                 // Define o modelo de linguagem. Opções incluem:
@@ -78,7 +97,6 @@ public class OpenAIResource {
                 .temperature(0.1)
                 .build();
 
-        LOGGER.info("Resposta: " + customModel);
         return Response.ok(customModel.generate(question.question())).build();
     }
 
@@ -88,9 +106,18 @@ public class OpenAIResource {
      */
     @GET
     @Path("/recipe")
-    public String foodRecipe() {
+    @Operation(summary = "Gerar receita de comida",
+            description = "Cria uma receita culinária com base nos ingredientes fornecidos. Este endpoint transforma um conjunto de ingredientes e um tipo de prato em uma receita detalhada.")
+    @APIResponses(value = {
+            @APIResponse(responseCode = "200", description = "Receita gerada com sucesso",
+                    content = @Content(mediaType = "text/plain",
+                            schema = @Schema(implementation = String.class))),
+            @APIResponse(responseCode = "400", description = "Dados de entrada inválidos"),
+            @APIResponse(responseCode = "500", description = "Erro interno no servidor")
+    })
+    public Response foodRecipe() {
         @java.lang.SuppressWarnings("java:S1481")
-        MyStructuredTemplate template = new MyStructuredTemplate();  // Estrutura base para criação de prompts.
+        MyStructuredTemplate template = new MyStructuredTemplate();
 
         // Criação de um prompt de receita com ingredientes específicos.
         PromptDeReceita promptDeReceita = new PromptDeReceita();
@@ -101,7 +128,8 @@ public class OpenAIResource {
         Prompt prompt = StructuredPromptProcessor.toPrompt(promptDeReceita);
 
         // Geração da receita com base no texto do prompt e retorno do texto da receita.
-        return chatModel.generate(prompt.text());
+        String recipe = chatModel.generate(prompt.text());
+        return Response.ok(recipe).build();
     }
 
     /**
@@ -110,24 +138,40 @@ public class OpenAIResource {
      */
     @POST
     @Path("/image")
-    public String generateImage(@Valid MyQuestion question) {
+    @Operation(summary = "Gerar imagem baseada em descrição textual",
+            description = "Recebe uma descrição textual e gera uma imagem correspondente, retornando a URL da imagem gerada.")
+    @APIResponses(value = {
+            @APIResponse(responseCode = "200", description = "Imagem gerada e URL retornada com sucesso",
+                    content = @Content(mediaType = "text/plain",
+                            schema = @Schema(implementation = String.class))),
+            @APIResponse(responseCode = "400", description = "Descrição inválida",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @APIResponse(responseCode = "500", description = "Erro interno no servidor",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @RequestBody(description = "Descrição textual para geração da imagem",
+            required = true,
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = MyQuestion.class)))
+    public Response generateImage(@Valid MyQuestion question) {
         try {
-            LOGGER.info("Recebido: " + question.question());
-
             // Configuração do modelo de geração de imagem com OpenAiImageModelBuilder
             ImageModel imageModel = new OpenAiImageModel.OpenAiImageModelBuilder()
-                    .apiKey(apiKey)  // Utiliza a chave API para autenticação no serviço da OpenAI.
-                    // Define o modelo "dall-e", especializado na criação de imagens baseadas em descrições textuais.
-                    .modelName("dall-e")
+                    .apiKey(apiKey)  // Chave API para autenticação no serviço da OpenAI.
+                    .modelName("dall-e")  // Modelo "dall-e" especializado na criação de imagens baseadas em descrições textuais.
                     .build();
 
             // Geração da imagem a partir da descrição textual e obtenção do URL da imagem resultante.
-            String response = imageModel.generate(question.question()).content().url().toURL().toString();
-            LOGGER.info("Resposta: " + response);
-            return response;
+            String imageUrl = imageModel.generate(question.question()).content().url().toURL().toString();
+            return Response.ok(imageUrl).build();
         } catch (Exception ex) {
-            LOGGER.error("Erro ao gerar imagem: " + ex.getMessage());
-            return null;  // Retorna null em caso de falha na geração da imagem.
+            // Log do erro e retorno de uma resposta de falha
+            UncaughtExceptions.LOGGER.error("Erro ao gerar imagem: " + ex.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Erro ao gerar imagem: " + ex.getMessage()))
+                    .build();
         }
     }
 
