@@ -4,9 +4,11 @@ import com.catapan.openia.dto.MyQuestion;
 import com.catapan.openia.dto.MyStructuredTemplate;
 import com.catapan.openia.dto.MyStructuredTemplate.PromptDeReceita;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.image.ImageModel;
 import dev.langchain4j.model.input.Prompt;
 import dev.langchain4j.model.input.structured.StructuredPromptProcessor;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiImageModel;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -18,6 +20,7 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import javax.validation.Valid;
 import java.util.Arrays;
 
 @Produces(MediaType.TEXT_PLAIN)
@@ -68,7 +71,21 @@ public class OpenAIResource {
         promptDeReceita.ingredientes = Arrays.asList("carne", "tomate", "cebola", "pimentao");
 
         Prompt prompt = StructuredPromptProcessor.toPrompt(promptDeReceita);
-
         return chatModel.generate(prompt.text());
+    }
+
+    @POST
+    @Path("/imagem")
+    public String generateImage(@Valid MyQuestion question) {
+        try {
+            LOGGER.info("Recebido: " + question.question());
+            ImageModel imageModel = new OpenAiImageModel.OpenAiImageModelBuilder().apiKey(apiKey).modelName("dall-e").build();
+
+            String response = imageModel.generate(question.question()).content().url().toURL().toString();
+            LOGGER.info("Resposta: " + response);
+            return response;
+        } catch (Exception ex) {
+            return null;
+        }
     }
 }
