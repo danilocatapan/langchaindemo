@@ -23,6 +23,7 @@ import org.jboss.logging.Logger;
 
 import java.util.Arrays;
 
+@Path("/openai")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.TEXT_PLAIN)
 public class OpenAIResource {
@@ -40,7 +41,7 @@ public class OpenAIResource {
      * Utiliza a API da OpenAI para gerar respostas a partir das perguntas dos usuários.
      */
     @POST
-    @Path("/answer")
+    @Path("/answer/generate")
     public Response chatWithOpenAI(MyQuestion question) {
         LOGGER.info("Recebido: " + question.question());
 
@@ -86,8 +87,8 @@ public class OpenAIResource {
      * Utiliza o modelo de linguagem para gerar uma receita formatada a partir de um prompt estruturado.
      */
     @GET
-    @Path("/receita")
-    public String criarReceita() {
+    @Path("/recipe")
+    public String foodRecipe() {
         @java.lang.SuppressWarnings("java:S1481")
         MyStructuredTemplate template = new MyStructuredTemplate();  // Estrutura base para criação de prompts.
 
@@ -108,7 +109,7 @@ public class OpenAIResource {
      * Utiliza a classe OpenAiImageModelBuilder para configurar e criar um modelo de geração de imagem.
      */
     @POST
-    @Path("/imagem")
+    @Path("/image")
     public String generateImage(@Valid MyQuestion question) {
         try {
             LOGGER.info("Recebido: " + question.question());
