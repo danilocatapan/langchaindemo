@@ -13,13 +13,13 @@ import org.eclipse.microprofile.openapi.annotations.servers.Server;
 @OpenAPIDefinition(
         info = @Info(
                 title = "OpenAI Chat API",
-                version = "1.0",
+                version = "1.0.4-SNAPSHOT",
                 description = "Esta API permite a interação com modelos de linguagem da OpenAI para responder perguntas, " +
                         "gerar receitas ou imagens baseadas em descrições textuais. Desenvolvida utilizando Quarkus e MicroProfile.",
                 contact = @Contact(
                         name = "Suporte API",
                         url = "http://example.com/contact",
-                        email = "support@example.com"
+                        email = "dcatapan@gmail.com"
                 ),
                 license = @License(
                         name = "Apache 2.0",
